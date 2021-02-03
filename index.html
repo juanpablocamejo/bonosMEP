@@ -30,7 +30,7 @@
   <script>
     jQuery.ajaxPrefilter(function (options) {
       if (options.crossDomain && jQuery.support.cors) {
-        options.url = "https://cors-anywhere.herokuapp.com/" + options.url;
+        options.url = "https://nocors.openode.io/" + options.url;
       }
     });
     let url ="https://bullmarketbrokers.com/Information/StockPrice/GetStockPrices?_ts=1612323139983&term=3&index=bonos&sortColumn=ticker&isAscending=true";
