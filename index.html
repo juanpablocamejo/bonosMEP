@@ -35,7 +35,7 @@
     });
     let url ="https://bullmarketbrokers.com/Information/StockPrice/GetStockPrices?_ts=1612323139983&term=3&index=bonos&sortColumn=ticker&isAscending=true";
     ObtenerDatos()();
-    setInterval(ObtenerDatos(), 15000);
+    setInterval(ObtenerDatos(), 5000);
     function ObtenerDatos() {
       return () => {
         $.get(url, function (res) {
