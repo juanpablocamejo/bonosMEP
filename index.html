@@ -24,7 +24,7 @@
       "https://bullmarketbrokers.com/Information/StockPrice/GetStockPrices?_ts=1612323139983&term=3&index=bonos&sortColumn=ticker&isAscending=true";
     setInterval(()=>{
     $.getJSON(
-      "http://www.whateverorigin.org/get?url=" +
+      "https://www.whateverorigin.org/get?url=" +
         encodeURIComponent(url) +
         "&callback=?",
       function (data) {
