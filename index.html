@@ -1,109 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-  </head>
-  <body>
-    <table>
-      <thead>
-        <tr>
-          <th>Ticker</th>
-          <th>Cotización MEP</th>
-          <th>Cotización MEP Inverso</th>
-          <th>P.Compra($)</th>
-          <th>P.Venta($)</th>
-          <th>P.Compra(U$S)</th>
-          <th>P.Venta(U$S)</th>
-        </tr>
-      </thead>
-      <tbody id="resultados"></tbody>
-    </table>
-  </body>
-  <script
-    src="https://code.jquery.com/jquery-3.5.1.min.js"
-    integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
-    crossorigin="anonymous"
-  ></script>
-  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.20/lodash.min.js"></script>
-  <script>
-    jQuery.ajaxPrefilter(function (options) {
-      if (options.crossDomain && jQuery.support.cors) {
-        options.url = "https://nocors.openode.io/" + options.url;
-      }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+</head>
+
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Cotización MEP</th>
+        <th>Cotización MEP Inverso</th>
+        <th>P.Compra($)</th>
+        <th>P.Venta($)</th>
+        <th>P.Compra(U$S)</th>
+        <th>P.Venta(U$S)</th>
+      </tr>
+    </thead>
+    <tbody id="resultados"></tbody>
+  </table>
+</body>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"
+  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.20/lodash.min.js"></script>
+<script>
+  jQuery.ajaxPrefilter(function (options) {
+    if (options.crossDomain && jQuery.support.cors) {
+      options.url = "https://nocors.openode.io/" + options.url;
+    }
+  });
+  let url = "https://bullmarketbrokers.com/Information/StockPrice/GetStockPrices?_ts=1612323139983&term=3&index=bonos&sortColumn=ticker&isAscending=true";
+  let dataAnterior = [];
+  ObtenerDatos()();
+  setInterval(ObtenerDatos(), 5000);
+  function ObtenerDatos() {
+    return () => {
+      $.get(url, function (res) {
+        dataAnterior = procesarData(res.result);
+      });
+    };
+  }
+  function esBonoDual(obj, ls) {
+    return ls.find((o) => o.ticker == `${obj.ticker}D`);
+  }
+
+  function esBonoEnDolares(obj) {
+    return obj.ticker.slice(-1) == "D";
+  }
+
+  function procesarData(data) {
+    let dic = {};
+    data
+      .filter((o) => esBonoDual(o, data))
+      .map((b) => {
+        let venta = b.stockOffer.askTop[0] || {};
+        let compra = b.stockOffer.bidTop[0] || {};
+        dic[b.ticker] = {
+          ticker: b.ticker,
+          venta: venta.price,
+          compra: compra.price,
+          cantCompra: compra.quantity,
+          cantVenta: venta.quantity,
+        };
+      });
+    data.filter(esBonoEnDolares).map((b) => {
+      if (!dic[b.ticker.slice(0, -1)]) return;
+      let ventaD = b.stockOffer.askTop[0] || {};
+      let compraD = b.stockOffer.bidTop[0] || {};
+      let key = b.ticker.slice(0, -1);
+      dic[key].compraD = compraD.price;
+      dic[key].ventaD = ventaD.price;
+      dic[key].cantCompraD = compraD.quantity;
+      dic[key].cantVentaD = ventaD.quantity;
+      dic[key].precioMEP =
+        dic[key].venta &&
+        dic[key].compraD &&
+        (dic[key].venta / dic[key].compraD).toFixed(3);
+      dic[key].precioMEPInv =
+        dic[key].venta &&
+        dic[key].compraD &&
+        (dic[key].compra / dic[key].ventaD).toFixed(3);
     });
-    let url ="https://bullmarketbrokers.com/Information/StockPrice/GetStockPrices?_ts=1612323139983&term=3&index=bonos&sortColumn=ticker&isAscending=true";
-    ObtenerDatos()();
-    setInterval(ObtenerDatos(), 5000);
-    function ObtenerDatos() {
-      return () => {
-        $.get(url, function (res) {
-          procesarData(res.result);
-        });
-      };
+
+    let resultados = Object.values(dic)
+      .filter((b) => b.precioMEP)
+      .sort((a, b) => a.precioMEP - b.precioMEP);
+
+    $("#resultados").html("");
+
+    resultados.map((b) => {
+      const a = dataAnterior[b.ticker]
+
+      $("#resultados").append(
+        comparar(b, a));
+    });
+
+    function linkMEP(b) {
+      if (b.precioMEP == Infinity || !b.precioMEP) return "-";
+      return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}&side=1&quantity=1&price=${b.venta}&market=GO">${b.precioMEP}</a>`
     }
-    function esBonoDual(obj, ls) {
-      return ls.find((o) => o.ticker == `${obj.ticker}D`);
+
+    function linkMEPInv(b) {
+      if (b.precioMEPInv == Infinity || !b.precioMEPInv) return "-";
+      return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}D&side=2&quantity=1&price=${b.compraD}&market=GO">${b.precioMEPInv}</a>`
     }
 
-    function esBonoEnDolares(obj) {
-      return obj.ticker.slice(-1) == "D";
-    }
+    function comparar(actual, anterior) {
+      let fila = `<tr><td>${actual.ticker}</td><td>${linkMEP(actual)}</td><td>${linkMEPInv(actual)}</td><td>${actual.compra}</td><td>${actual.venta}</td><td>${actual.compraD}</td><td>${actual.ventaD}</td></tr>`
 
-    function procesarData(data) {
-      let dic = {};
-      data
-        .filter((o) => esBonoDual(o, data))
-        .map((b) => {
-          let venta = b.stockOffer.askTop[0] || {};
-          let compra = b.stockOffer.bidTop[0] || {};
-          dic[b.ticker] = {
-            ticker: b.ticker,
-            venta: venta.price,
-            compra: compra.price,
-            cantCompra: compra.quantity,
-            cantVenta: venta.quantity,
-          };
-        });
-      data.filter(esBonoEnDolares).map((b) => {
-        if (!dic[b.ticker.slice(0, -1)]) return;
-        let ventaD = b.stockOffer.askTop[0] || {};
-        let compraD = b.stockOffer.bidTop[0] || {};
-        let key = b.ticker.slice(0, -1);
-        dic[key].compraD = compraD.price;
-        dic[key].ventaD = ventaD.price;
-        dic[key].cantCompraD = compraD.quantity;
-        dic[key].cantVentaD = ventaD.quantity;
-        dic[key].precioMEP =
-          dic[key].venta &&
-          dic[key].compraD &&
-          (dic[key].venta / dic[key].compraD).toFixed(3);
-        dic[key].precioMEPInv =
-          dic[key].venta &&
-          dic[key].compraD &&
-          (dic[key].compra / dic[key].ventaD).toFixed(3);
-      });
+      if (anterior) {
+        let filaDom = jQuery.parseHTML(fila);
 
-      let resultados = Object.values(dic)
-        .filter((b) => b.precioMEP)
-        .sort((a, b) => a.precioMEP - b.precioMEP);
+        if (actual.precioMEP != anterior.precioMEP) {
+          $(filaDom).find("td:nth-child(2)").first().css("background-color", "red")
+        }
 
-      $("#resultados").html("");
-
-      resultados.map((b) => {
-        $("#resultados").append(
-          `<tr><td>${b.ticker}</td><td>${linkMEP(b)}</td><td>${linkMEPInv(b)}</td><td>${b.compra}</td><td>${b.venta}</td><td>${b.compraD}</td><td>${b.ventaD}</td></tr>`
-        );
-      });
-      function linkMEP(b){
-        if (b.precioMEP == Infinity || !b.precioMEP) return "-";
-        return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}&side=1&quantity=1&price=${b.venta}&market=GO">${b.precioMEP}</a>`
+        if (actual.precioMEPInv != anterior.precioMEPInv) {
+          $(filaDom).find("td:nth-child(3)").first().css("background-color", "red")
+        }
       }
-      function linkMEPInv(b){
-        if (b.precioMEPInv == Infinity || !b.precioMEPInv) return "-";
-        return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}D&side=2&quantity=1&price=${b.compraD}&market=GO">${b.precioMEPInv}</a>`
-      }
+
+      return fila;
     }
-  </script>
+
+    return dic;
+  }
+</script>
+
 </html>
