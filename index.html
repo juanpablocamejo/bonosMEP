@@ -78,11 +78,11 @@
         dic[key].precioMEP =
           dic[key].venta &&
           dic[key].compraD &&
-          dic[key].venta / dic[key].compraD;
+          (dic[key].venta / dic[key].compraD).toFixed(3);
         dic[key].precioMEPInv =
           dic[key].venta &&
           dic[key].compraD &&
-          dic[key].compra / dic[key].ventaD;
+          (dic[key].compra / dic[key].ventaD).toFixed(3);
       });
 
       let resultados = Object.values(dic)
@@ -93,9 +93,17 @@
 
       resultados.map((b) => {
         $("#resultados").append(
-          `<tr><td>${b.ticker}</td><td>${b.precioMEP}</td><td>${b.precioMEPInv}</td><td>${b.compra}</td><td>${b.venta}</td><td>${b.compraD}</td><td>${b.ventaD}</td></tr>`
+          `<tr><td>${b.ticker}</td><td>${linkMEP(b)}</td><td>${linkMEPInv(b)}</td><td>${b.compra}</td><td>${b.venta}</td><td>${b.compraD}</td><td>${b.ventaD}</td></tr>`
         );
       });
+      function linkMEP(b){
+        if (b.precioMEP == Infinity || !b.precioMEP) return "-";
+        return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}&side=1&quantity=1&price=${b.venta}&market=GO">${b.precioMEP}</a>`
+      }
+      function linkMEPInv(b){
+        if (b.precioMEPInv == Infinity || !b.precioMEPInv) return "-";
+        return `<a target="blank" href="https://bullmarketbrokers.com/Clients/MildOrder/?symbol=${b.ticker}D&side=2&quantity=1&price=${b.compraD}&market=GO">${b.precioMEPInv}</a>`
+      }
     }
   </script>
 </html>
